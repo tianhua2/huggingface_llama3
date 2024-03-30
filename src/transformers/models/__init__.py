@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from . import (
-    superglue,
     albert,
     align,
     altclip,
@@ -202,7 +201,6 @@ from . import (
     regnet,
     rembert,
     resnet,
-    superglue,
     roberta,
     roberta_prelayernorm,
     roc_bert,
@@ -224,8 +222,8 @@ from . import (
     squeezebert,
     stablelm,
     starcoder2,
-    superpoint,
     superglue,
+    superpoint,
     swiftformer,
     swin,
     swin2sr,
