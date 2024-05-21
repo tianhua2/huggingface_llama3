@@ -1417,11 +1417,11 @@ else:
             "AutoModelForDepthEstimation",
             "AutoModelForDocumentQuestionAnswering",
             "AutoModelForImageClassification",
-            "AutoModelForImageMatching",
             "AutoModelForImageSegmentation",
             "AutoModelForImageToImage",
             "AutoModelForInstanceSegmentation",
             "AutoModelForKeypointDetection",
+            "AutoModelForKeypointMatching",
             "AutoModelForMaskedImageModeling",
             "AutoModelForMaskedLM",
             "AutoModelForMaskGeneration",
@@ -3300,7 +3300,7 @@ else:
     )
     _import_structure["models.superglue"].extend(
         [
-            "SuperGlueForImageMatching",
+            "SuperGlueForKeypointMatching",
             "SuperGluePreTrainedModel",
         ]
     )
@@ -6215,11 +6215,11 @@ if TYPE_CHECKING:
             AutoModelForDepthEstimation,
             AutoModelForDocumentQuestionAnswering,
             AutoModelForImageClassification,
-            AutoModelForImageMatching,
             AutoModelForImageSegmentation,
             AutoModelForImageToImage,
             AutoModelForInstanceSegmentation,
             AutoModelForKeypointDetection,
+            AutoModelForKeypointMatching,
             AutoModelForMaskedImageModeling,
             AutoModelForMaskedLM,
             AutoModelForMaskGeneration,
@@ -7716,7 +7716,7 @@ if TYPE_CHECKING:
             Starcoder2PreTrainedModel,
         )
         from .models.superglue import (
-            SuperGlueForImageMatching,
+            SuperGlueForKeypointMatching,
             SuperGluePreTrainedModel,
         )
         from .models.superpoint import (
