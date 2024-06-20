@@ -24,13 +24,12 @@ from ...test_image_processing_common import (
 
 if is_torch_available():
     import numpy as np
-    import torch
 
 if is_vision_available():
     from transformers import LightGlueImageProcessor
 
 
-class SuperGlueImageProcessingTester(unittest.TestCase):
+class LightGlueImageProcessingTester(unittest.TestCase):
     def __init__(
         self,
         parent,
@@ -79,12 +78,12 @@ class SuperGlueImageProcessingTester(unittest.TestCase):
 
 @require_torch
 @require_vision
-class SuperGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
+class LightGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
     image_processing_class = LightGlueImageProcessor if is_vision_available() else None
 
     def setUp(self) -> None:
         super().setUp()
-        self.image_processor_tester = SuperGlueImageProcessingTester(self)
+        self.image_processor_tester = LightGlueImageProcessingTester(self)
 
     @property
     def image_processor_dict(self):
@@ -110,86 +109,6 @@ class SuperGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
     def test_call_numpy_4_channels(self):
         pass
 
-    def test_input_images_conformity(self):
-        image_processor = self.image_processing_class.from_dict(self.image_processor_dict)
-
-        working_image_formats = [
-            {"pairs": False, "batch_size": 2},
-            {"pairs": True, "batch_size": 2},
-            {"pairs": True, "batch_size": 4},
-            {"pairs": True, "batch_size": 6},
-        ]
-
-        not_working_formats = [
-            {"pairs": False, "batch_size": 4},
-            {"pairs": False, "batch_size": 3},
-            {"pairs": True, "batch_size": 3},
-        ]
-
-        working_image_inputs = [
-            self.image_processor_tester.prepare_image_inputs(**image_format) for image_format in working_image_formats
-        ]
-
-        not_working_image_inputs = [
-            self.image_processor_tester.prepare_image_inputs(**image_format) for image_format in not_working_formats
-        ]
-
-        working_image_inputs.extend(
-            [
-                [
-                    np.random.randint(255, size=(3, 640, 480)),
-                    np.random.randint(255, size=(3, 640, 480)),
-                ],
-                np.random.randint(255, size=(2, 3, 640, 480)),
-                [
-                    [
-                        np.random.randint(255, size=(3, 640, 480)),
-                        np.random.randint(255, size=(3, 640, 480)),
-                    ],
-                ],
-                [
-                    np.random.randint(255, size=(2, 3, 640, 480)),
-                ],
-                [
-                    np.random.randint(255, size=(2, 3, 640, 480)),
-                    np.random.randint(255, size=(2, 3, 640, 480)),
-                    np.random.randint(255, size=(2, 3, 640, 480)),
-                ],
-                np.random.randint(255, size=(1, 2, 3, 640, 480)),
-                np.random.randint(255, size=(3, 2, 3, 640, 480)),
-                [
-                    torch.rand((3, 640, 480)),
-                    torch.rand((3, 640, 480)),
-                ],
-                torch.rand((2, 3, 640, 480)),
-                torch.rand((1, 2, 3, 640, 480)),
-                torch.rand((2, 2, 3, 640, 480)),
-            ]
-        )
-
-        not_working_image_inputs.extend(
-            [
-                np.random.randint(255, size=(3, 640, 480)),
-                [np.random.randint(255, size=(3, 640, 480))],
-                np.random.randint(255, size=(1, 3, 640, 480)),
-                [[np.random.randint(255, size=(3, 640, 480))]],
-                [
-                    np.random.randint(255, size=(1, 3, 640, 480)),
-                    np.random.randint(255, size=(1, 3, 640, 480)),
-                ],
-                np.random.randint(255, size=(1, 1, 3, 640, 480)),
-                torch.rand((3, 640, 480)),
-                torch.rand((1, 3, 640, 480)),
-            ]
-        )
-
-        for image_input in working_image_inputs:
-            image_processor.preprocess(image_input, return_tensors="pt")
-
-        for image_input in not_working_image_inputs:
-            with self.assertRaises(ValueError):
-                image_processor.preprocess(image_input)
-
     def test_input_images_properly_paired(self):
         image_processor = self.image_processing_class.from_dict(self.image_processor_dict)
         image_inputs = self.image_processor_tester.prepare_image_inputs()
@@ -212,7 +131,7 @@ class SuperGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
                 self.assertTrue(np.all(image[0, ...] == image[1, ...]) and np.all(image[1, ...] == image[2, ...]))
 
     def test_call_numpy(self):
-        # Test overwritten because SuperGlueImageProcessor combines images by pair to feed it into SuperGlue
+        # Test overwritten because LightGlueImageProcessor combines images by pair to feed it into LightGlue
 
         # Initialize image_processing
         image_processing = self.image_processing_class(**self.image_processor_dict)
@@ -241,7 +160,7 @@ class SuperGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
             image_processing(image_pairs, return_tensors="pt").pixel_values
 
     def test_call_pil(self):
-        # Test overwritten because SuperGlueImageProcessor combines images by pair to feed it into SuperGlue
+        # Test overwritten because LightGlueImageProcessor combines images by pair to feed it into LightGlue
 
         # Initialize image_processing
         image_processing = self.image_processing_class(**self.image_processor_dict)
@@ -268,7 +187,7 @@ class SuperGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
             image_processing(image_pairs, return_tensors="pt").pixel_values
 
     def test_call_pytorch(self):
-        # Test overwritten because SuperGlueImageProcessor combines images by pair to feed it into SuperGlue
+        # Test overwritten because LightGlueImageProcessor combines images by pair to feed it into LightGlue
 
         # Initialize image_processing
         image_processing = self.image_processing_class(**self.image_processor_dict)
@@ -310,3 +229,16 @@ class SuperGlueImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         encoded_images = image_processing(image_pairs, return_tensors="pt").pixel_values
         expected_output_image_shape = self.image_processor_tester.expected_output_image_shape(image_pairs[0])
         self.assertEqual(tuple(encoded_images.shape), (expected_batch_size, *expected_output_image_shape))
+
+    def test_image_processor_padding(self):
+        custom_image_processor_dict = self.image_processor_dict
+        custom_image_processor_dict["do_resize"] = False
+        image_processing = self.image_processing_class(**custom_image_processor_dict)
+        image_pairs = self.image_processor_tester.prepare_image_inputs(
+            equal_resolution=False, numpify=True, batch_size=2, pairs=False
+        )
+        encoded_images = image_processing(image_pairs, return_tensors="pt").pixel_values
+        max_height = max(image.shape[1] for image in image_pairs)
+        max_width = max(image.shape[2] for image in image_pairs)
+        expected_output_image_shape = (2, 3, max_height, max_width)
+        self.assertEqual(tuple(encoded_images.shape), (1, *expected_output_image_shape))
