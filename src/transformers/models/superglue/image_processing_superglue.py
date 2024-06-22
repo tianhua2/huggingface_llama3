@@ -129,7 +129,7 @@ def check_image_pairs_input(image_pairs: ImageInput):
     raise ValueError(value_error_message)
 
 
-class LightGlueImageProcessor(BaseImageProcessor):
+class SuperGlueImageProcessor(BaseImageProcessor):
     r"""
     Constructs a SuperGlue image processor.
 
