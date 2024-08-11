@@ -48,8 +48,6 @@ from ...utils import (
     replace_return_docstrings,
 )
 from .configuration_llama import LlamaConfig
-from .tensor_parallel_plan_llama import LlamaTensorParallelPlan
-
 
 logger = logging.get_logger(__name__)
 

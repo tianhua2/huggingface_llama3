@@ -39,14 +39,6 @@ from packaging import version
 from torch import Tensor, nn
 from torch.nn import CrossEntropyLoss, Identity
 from torch.utils.checkpoint import checkpoint
-from torch.distributed._tensor import init_device_mesh, Shard, Replicate
-from torch.distributed.tensor.parallel import (
-    parallelize_module,
-    ColwiseParallel,
-    RowwiseParallel,
-    PrepareModuleInput,
-    SequenceParallel,
-)
 
 from .activations import get_activation
 from .configuration_utils import PretrainedConfig
