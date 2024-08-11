@@ -711,6 +711,9 @@ class Trainer:
             num_devices = xr.global_runtime_device_count()
             xs.set_global_mesh(xs.Mesh(np.array(range(num_devices)), (num_devices, 1), axis_names=("fsdp", "tensor")))
 
+        if not self.args.metric_for_best_model:
+            self.args.metric_for_best_model = "loss"
+
     def _activate_neftune(self, model):
         r"""
         Activates the neftune as presented in this code: https://github.com/neelsjain/NEFTune and paper:
@@ -2812,10 +2815,7 @@ class Trainer:
             new_best_metric = self._determine_best_metric(metrics=metrics, trial=trial)
 
             if self.args.save_strategy == SaveStrategy.BEST:
-                if new_best_metric:
-                    self.control.should_save = True
-                else:
-                    self.control_should_save = False
+                self.control.should_save = new_best_metric
 
         if self.control.should_save:
             self._save_checkpoint(model, trial)
@@ -2908,10 +2908,7 @@ class Trainer:
                     f"The available evaluation metrics are: {list(metrics.keys())}. Consider changing the `metric_for_best_model` via the TrainingArguments."
                 ) from exc
 
-            if self.args.greater_is_better:
-                operator = np.greater
-            else:
-                operator = np.less
+            operator = np.greater if self.args.greater_is_better else np.less
         else:
             metric_value = metrics["eval_loss"]
             operator = np.less
