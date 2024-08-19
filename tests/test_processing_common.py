@@ -163,7 +163,7 @@ class ProcessorTesterMixin:
         if "image_processor" not in self.processor_class.attributes:
             self.skipTest(f"image_processor attribute not present in {self.processor_class}")
         image_processor = self.get_component("image_processor")
-        tokenizer = self.get_component("tokenizer", padding="longest")
+        tokenizer = self.get_component("tokenizer", padding="max_length", max_length=117)
 
         processor = self.processor_class(tokenizer=tokenizer, image_processor=image_processor)
         self.skip_processor_without_typed_kwargs(processor)

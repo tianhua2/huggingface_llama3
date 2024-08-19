@@ -23,12 +23,17 @@ from ...feature_extraction_utils import BatchFeature
 from ...image_utils import ImageInput
 from ...processing_utils import ProcessingKwargs, ProcessorMixin, TextKwargs
 from ...tokenization_utils_base import PreTokenizedInput, TextInput
+from ...utils import is_torch_available
 
 
 if sys.version_info >= (3, 11):
     from typing import Unpack
 else:
     from typing_extensions import Unpack
+
+
+if is_torch_available():
+    import torch
 
 
 class ChameleonTextKwargs(TextKwargs, total=False):
@@ -161,3 +166,17 @@ class ChameleonProcessor(ProcessorMixin):
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))
+
+    def postprocess_pixel_values(self, pixel_values: "torch.FloatTensor") -> "torch.Tensor":
+        """
+        Postprocess a batch of pixel values to images.
+
+        Args:
+            pixel_values (`np.ndarray` of shape `(batch_size, num_channels, image_size, image_size)` or `(num_channels, image_size, image_size)`):
+                A batch or a single tensor of pixel values to postprocess.
+
+        Returns:
+            `torch.Tensor` of shape `(batch_size, num_channels, image_size, image_size)`:
+                The postprocessed images.
+        """
+        return self.image_processor.postprocess(pixel_values)
