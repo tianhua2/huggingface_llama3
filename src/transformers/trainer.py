@@ -931,26 +931,27 @@ class Trainer:
         return self.accelerator.prepare(DataLoader(train_dataset, **dataloader_params))
 
     def _get_eval_sampler(self, eval_dataset: Dataset) -> Optional[torch.utils.data.Sampler]:
-        # Deprecated code
-        if self.args.use_legacy_prediction_loop:
-            if is_torch_xla_available():
-                return SequentialDistributedSampler(
-                    eval_dataset, num_replicas=xm.xrt_world_size(), rank=xm.get_ordinal()
-                )
-            elif is_sagemaker_mp_enabled():
-                return SequentialDistributedSampler(
-                    eval_dataset,
-                    num_replicas=smp.dp_size(),
-                    rank=smp.dp_rank(),
-                    batch_size=self.args.per_device_eval_batch_size,
+        if self.eval_dataset is None or not has_length(self.eval_dataset):
+            return None
+        # Build the sampler.
+        if self.args.group_by_length:
+            if is_datasets_available() and isinstance(self.eval_dataset, datasets.Dataset):
+                lengths = (
+                    self.eval_dataset[self.args.length_column_name]
+                    if self.args.length_column_name in self.eval_dataset.column_names
+                    else None
                 )
             else:
-                return SequentialSampler(eval_dataset)
-
-        if self.args.world_size <= 1:
-            return SequentialSampler(eval_dataset)
+                lengths = None
+            model_input_name = self.tokenizer.model_input_names[0] if self.tokenizer is not None else None
+            return LengthGroupedSampler(
+                self.args.eval_batch_size,
+                dataset=self.eval_dataset,
+                lengths=lengths,
+                model_input_name=model_input_name,
+            )
         else:
-            return None
+            return RandomSampler(self.eval_dataset)
 
     def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
         """
