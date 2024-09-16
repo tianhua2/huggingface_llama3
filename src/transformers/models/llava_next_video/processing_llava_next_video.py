@@ -16,6 +16,7 @@
 Processor class for LLaVa-NeXT-Video.
 """
 
+import math
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from ...feature_extraction_utils import BatchFeature
@@ -49,8 +50,8 @@ class LlavaNextVideoProcessor(ProcessorMixin):
             The tokenizer is a required input.
         chat_template (`str`, *optional*):
             Jinja chat template that will be used in tokenizer's `apply_chat_template`
-        patch_size (`int`, *optional*):
-            Patch size from the vision tower.
+        num_image_tokens (`int`, *optional*):
+            Number of tokens needed to encode one image with a vision tower.
         vision_feature_select_strategy (`str`, *optional*):
             The feature selection strategy used to select the vision feature from the vision backbone.
             Shoudl be same as in model's config
@@ -63,7 +64,13 @@ class LlavaNextVideoProcessor(ProcessorMixin):
     # video and image processor share same args, but have different processing logic
     # only image processor config is saved in the hub
     attributes = ["video_processor", "image_processor", "tokenizer"]
-    valid_kwargs = ["chat_template", "patch_size", "vision_feature_select_strategy", "image_token", "video_token"]
+    valid_kwargs = [
+        "chat_template",
+        "num_image_tokens",
+        "vision_feature_select_strategy",
+        "image_token",
+        "video_token",
+    ]
     image_processor_class = "LlavaNextImageProcessor"
     video_processor_class = "LlavaNextVideoImageProcessor"
     tokenizer_class = ("LlamaTokenizer", "LlamaTokenizerFast")
@@ -74,13 +81,13 @@ class LlavaNextVideoProcessor(ProcessorMixin):
         image_processor=None,
         tokenizer=None,
         chat_template=None,
-        patch_size=None,
+        num_image_tokens=None,
         vision_feature_select_strategy=None,
         video_token="<video>",
         image_token="<image>",
         **kwargs,
     ):
-        self.patch_size = patch_size
+        self.num_image_tokens = num_image_tokens
         self.vision_feature_select_strategy = vision_feature_select_strategy
         self.image_token = image_token
         self.video_token = video_token
@@ -161,11 +168,11 @@ class LlavaNextVideoProcessor(ProcessorMixin):
         elif not isinstance(text, list) and not isinstance(text[0], str):
             raise ValueError("Invalid input text. Please provide a string, or a list of strings")
 
-        if self.patch_size is None or self.vision_feature_select_strategy is None:
+        if self.num_image_tokens is None or self.vision_feature_select_strategy is None:
             logger.warning_once(
                 "Expanding inputs for image/video tokens in LLaVa-NeXT-Video should be done in processing. "
-                "Please add `patch_size` and `vision_feature_select_strategy` to the model's processing config or set directly "
-                "with `processor.patch_size = {{patch_size}}` and processor.vision_feature_select_strategy = {{vision_feature_select_strategy}}`. "
+                "Please add `num_image_tokens` and `vision_feature_select_strategy` to the model's processing config or set directly "
+                "with `processor.num_image_tokens = {{num_image_tokens}}` and processor.vision_feature_select_strategy = {{vision_feature_select_strategy}}`. "
                 "Using processors without these attributes in the config is deprecated and will throw an error in v4.47."
             )
         else:
@@ -188,9 +195,8 @@ class LlavaNextVideoProcessor(ProcessorMixin):
             # videos are easier, simply get frames and multiply
             if videos_inputs:
                 one_video = to_numpy_array(videos_inputs.get("pixel_values_videos")[0])
-                height, width = get_image_size(one_video[0])
                 num_frames = one_video.shape[0]  # frame dim is always after batch dim
-                num_image_tokens = (height // self.patch_size) * (width // self.patch_size)
+                num_image_tokens = self.num_image_tokens
                 num_video_tokens = num_image_tokens // 4 * num_frames  # divide by 4 needed for avg pooling layer
                 prompt_strings = []
                 for sample in text:
@@ -216,13 +222,13 @@ class LlavaNextVideoProcessor(ProcessorMixin):
         )
         scale_height, scale_width = height_best_resolution // height, width_best_resolution // width
 
-        patches_height = height // self.patch_size
-        patches_width = width // self.patch_size
+        patches_height = int(math.sqrt(self.num_image_tokens))
+        patches_width = int(math.sqrt(self.num_image_tokens))
         unpadded_features, newline_features = self._get_unpadded_features(
             orig_height, orig_width, patches_height, patches_width, scale_height, scale_width
         )
         # The base patch covers the entire image (+1 for the CLS)
-        base_features = patches_height * patches_width + 1
+        base_features = self.num_image_tokens
         num_image_tokens = unpadded_features + newline_features + base_features
         return num_image_tokens
 
