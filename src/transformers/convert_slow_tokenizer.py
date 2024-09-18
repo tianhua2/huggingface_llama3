@@ -341,9 +341,10 @@ class GPT2Converter(Converter):
             )
         )
 
-        tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=self.original_tokenizer.add_prefix_space)
+        add_prefix_space = getattr(self.original_tokenizer, "add_prefix_space", False)
+        tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=add_prefix_space)
         tokenizer.decoder = decoders.ByteLevel()
-        if self.original_tokenizer.add_bos_token:
+        if getattr(self.original_tokenizer, "add_bos_token", False):
             bos = self.original_tokenizer.bos_token
             bos_token_id = self.original_tokenizer.bos_token_id
             tokenizer.post_processor = processors.TemplateProcessing(
