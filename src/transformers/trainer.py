@@ -53,7 +53,7 @@ import torch.distributed as dist
 from huggingface_hub import ModelCard, create_repo, upload_folder
 from packaging import version
 from torch import nn
-from torch.utils.data import DataLoader, Dataset, IterableDataset, RandomSampler
+from torch.utils.data import DataLoader, Dataset, IterableDataset, RandomSampler, SequentialSampler
 
 from . import __version__
 from .configuration_utils import PretrainedConfig
@@ -934,6 +934,23 @@ class Trainer:
         if self.eval_dataset is None or not has_length(self.eval_dataset):
             return None
         # Build the sampler.
+        
+        # Deprecated code
+        if self.args.use_legacy_prediction_loop:
+            if is_torch_xla_available():
+                return SequentialDistributedSampler(
+                    eval_dataset, num_replicas=xm.xrt_world_size(), rank=xm.get_ordinal()
+                )
+            elif is_sagemaker_mp_enabled():
+                return SequentialDistributedSampler(
+                    eval_dataset,
+                    num_replicas=smp.dp_size(),
+                    rank=smp.dp_rank(),
+                    batch_size=self.args.per_device_eval_batch_size,
+                )
+            else:
+                return SequentialSampler(eval_dataset)
+        
         if self.args.group_by_length:
             if is_datasets_available() and isinstance(self.eval_dataset, datasets.Dataset):
                 lengths = (
@@ -950,8 +967,11 @@ class Trainer:
                 lengths=lengths,
                 model_input_name=model_input_name,
             )
+        
+        if self.args.world_size <= 1:
+            return SequentialSampler(eval_dataset)
         else:
-            return RandomSampler(self.eval_dataset)
+            return None
 
     def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
         """
