@@ -934,7 +934,7 @@ class Trainer:
         if self.eval_dataset is None or not has_length(self.eval_dataset):
             return None
         # Build the sampler.
-        
+
         # Deprecated code
         if self.args.use_legacy_prediction_loop:
             if is_torch_xla_available():
@@ -950,7 +950,7 @@ class Trainer:
                 )
             else:
                 return SequentialSampler(eval_dataset)
-        
+
         if self.args.group_by_length:
             if is_datasets_available() and isinstance(self.eval_dataset, datasets.Dataset):
                 lengths = (
@@ -967,7 +967,7 @@ class Trainer:
                 lengths=lengths,
                 model_input_name=model_input_name,
             )
-        
+
         if self.args.world_size <= 1:
             return SequentialSampler(eval_dataset)
         else:
