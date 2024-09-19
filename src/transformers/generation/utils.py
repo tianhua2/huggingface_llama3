@@ -41,6 +41,7 @@ from ..models.auto import (
     MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING,
     MODEL_FOR_VISION_2_SEQ_MAPPING,
 )
+from ..models.auto.tokenization_auto import AutoTokenizer
 from ..pytorch_utils import isin_mps_friendly
 from ..tokenization_utils import ExtensionsTrie
 from ..utils import (
@@ -55,6 +56,7 @@ from .beam_constraints import DisjunctiveConstraint, PhrasalConstraint
 from .beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer
 from .candidate_generator import (
     AssistedCandidateGenerator,
+    AssistedCandidateGeneratorDifferentTokenizers,
     CandidateGenerator,
     PromptLookupCandidateGenerator,
     _crop_past_key_values,
@@ -685,17 +687,39 @@ class GenerationMixin:
         inputs_tensor: torch.Tensor,
         assistant_model: "PreTrainedModel",
         logits_processor: LogitsProcessorList,
+        target_tokenizer: AutoTokenizer,
+        assistant_tokenizer: AutoTokenizer,
+        target_lookbehind: int,
+        assistant_lookbehind: int,
         model_kwargs: Dict,
     ) -> CandidateGenerator:
         """
         Returns the candidate generator to be used in `assisted_generation`
         """
+        different_tokenizers = (
+            all(v is not None for v in (assistant_model, target_tokenizer, assistant_tokenizer))
+            and self.config.vocab_size != assistant_model.config.vocab_size
+        )
+
         if generation_config.prompt_lookup_num_tokens is not None:
             candidate_generator = PromptLookupCandidateGenerator(
                 eos_token_id=generation_config._eos_token_tensor,
                 num_output_tokens=generation_config.prompt_lookup_num_tokens,
                 max_matching_ngram_size=generation_config.max_matching_ngram_size,
                 max_length=generation_config.max_length,
+            )
+        elif different_tokenizers:
+            candidate_generator = AssistedCandidateGeneratorDifferentTokenizers(
+                input_ids=input_ids,
+                assistant_model=assistant_model,
+                generation_config=generation_config,
+                model_kwargs=model_kwargs,
+                inputs_tensor=inputs_tensor,
+                logits_processor=logits_processor,
+                assistant_tokenizer=assistant_tokenizer,
+                target_tokenizer=target_tokenizer,
+                target_lookbehind=target_lookbehind,
+                assistant_lookbehind=assistant_lookbehind,
             )
         else:
             candidate_generator = AssistedCandidateGenerator(
@@ -1138,7 +1162,7 @@ class GenerationMixin:
                 exception_message += f" Please use one of the following classes instead: {generate_compatible_classes}"
             raise TypeError(exception_message)
 
-    def _validate_assistant(self, assistant_model):
+    def _validate_assistant(self, assistant_model, assistant_tokenizer):
         if assistant_model is None:
             return
 
@@ -1154,7 +1178,7 @@ class GenerationMixin:
                     "Ensure you load the assistant with the correct encoder-decoder class, e.g. `AutoModelForSpeechSeq2Seq` for Whisper."
                 )
 
-        if not self.config.vocab_size == assistant_model.config.vocab_size:
+        if assistant_tokenizer is None and not self.config.vocab_size == assistant_model.config.vocab_size:
             raise ValueError("Make sure the main and assistant model use the same tokenizer")
 
     def _validate_model_kwargs(self, model_kwargs: Dict[str, Any]):
@@ -1722,6 +1746,10 @@ class GenerationMixin:
         streamer: Optional["BaseStreamer"] = None,
         negative_prompt_ids: Optional[torch.Tensor] = None,
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
+        target_tokenizer: Optional[AutoTokenizer] = None,
+        assistant_tokenizer: Optional[AutoTokenizer] = None,
+        target_lookbehind: Optional[int] = 50,
+        assistant_lookbehind: Optional[int] = 50,
         **kwargs,
     ) -> Union[GenerateOutput, torch.LongTensor]:
         r"""
@@ -1812,7 +1840,7 @@ class GenerationMixin:
         tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
         generation_config, model_kwargs = self._prepare_generation_config(generation_config, **kwargs)
         self._validate_model_kwargs(model_kwargs.copy())
-        self._validate_assistant(assistant_model)
+        self._validate_assistant(assistant_model, assistant_tokenizer)
 
         # 2. Set generation parameters if not already defined
         if synced_gpus is None:
@@ -1990,6 +2018,10 @@ class GenerationMixin:
                 inputs_tensor=inputs_tensor,
                 assistant_model=assistant_model,
                 logits_processor=logits_processor,
+                target_tokenizer=target_tokenizer,
+                assistant_tokenizer=assistant_tokenizer,
+                target_lookbehind=target_lookbehind,
+                assistant_lookbehind=assistant_lookbehind,
                 model_kwargs=model_kwargs,
             )
 
@@ -4005,8 +4037,13 @@ class GenerationMixin:
             cur_len = input_ids.shape[-1]
 
             #  1. Fetch candidate sequences from a `CandidateGenerator`
-            candidate_input_ids, candidate_logits = candidate_generator.get_candidates(input_ids)
-            candidate_input_ids = candidate_input_ids.to(self.device)
+            if isinstance(candidate_generator, AssistedCandidateGeneratorDifferentTokenizers):
+                candidate_input_ids, candidate_logits = candidate_generator.get_candidates(
+                    input_ids, stopping_criteria
+                )
+            else:
+                candidate_input_ids, candidate_logits = candidate_generator.get_candidates(input_ids)
+
             if candidate_logits is not None:
                 candidate_logits = candidate_logits.to(self.device)
 
