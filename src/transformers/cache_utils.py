@@ -536,7 +536,6 @@ class DynamicSlidingWindowCache(DynamicCache):
     def __init__(self, sliding_window: int):
         super().__init__()
         self.sliding_window = sliding_window
-        self.slicing_
 
     def update(
         self,
