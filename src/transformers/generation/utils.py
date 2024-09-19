@@ -28,6 +28,7 @@ from torch.nn import functional as F
 from ..cache_utils import (
     Cache,
     DynamicCache,
+    DynamicSlidingWindowCache,
     EncoderDecoderCache,
     OffloadedCache,
     QuantizedCacheConfig,
@@ -1612,11 +1613,15 @@ class GenerationMixin:
         # Use DynamicCache() instance by default. This will avoid back and forth from legacy format that
         # keeps copying the cache thus using much more memory
         else:
-            model_kwargs[cache_name] = (
-                DynamicCache()
-                if not requires_cross_attention_cache
-                else EncoderDecoderCache(DynamicCache(), DynamicCache())
-            )
+            # If using sliding window attention, use specialized DynamicSlidingWindowCache
+            if getattr(self.config, "sliding_window", None) is not None and not requires_cross_attention_cache:
+                model_kwargs[cache_name] = DynamicSlidingWindowCache(self.config.sliding_window)
+            else:
+                model_kwargs[cache_name] = (
+                    DynamicCache()
+                    if not requires_cross_attention_cache
+                    else EncoderDecoderCache(DynamicCache(), DynamicCache())
+                )
 
     def _supports_num_logits_to_keep(self) -> bool:
         """
