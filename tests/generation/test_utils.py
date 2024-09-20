@@ -1874,9 +1874,9 @@ class GenerationTesterMixin:
             if config.is_encoder_decoder:
                 cache_cls = EncoderDecoderCache
                 past_key_values = cache_cls(DynamicCache(), DynamicCache())
-            elif getattr(self.config, "sliding_window", None) is not None:
+            elif getattr(config, "sliding_window", None) is not None:
                 cache_cls = DynamicSlidingWindowCache
-                past_key_values = cache_cls(self.config.sliding_window)
+                past_key_values = cache_cls(config.sliding_window)
             else:
                 cache_cls = DynamicCache
                 past_key_values = cache_cls()
