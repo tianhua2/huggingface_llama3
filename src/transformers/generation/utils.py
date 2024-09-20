@@ -1614,7 +1614,7 @@ class GenerationMixin:
         # keeps copying the cache thus using much more memory
         else:
             # If using sliding window attention, use specialized DynamicSlidingWindowCache. Assisted generation cannot use it because
-            # it needs to roll back the cache with is not possible with a sliding window (for more than 1 generated/discarded token at a time)
+            # it needs to generate more than 1 token at a time, which is not possible with current fixed size implementation
             if getattr(self.config, "sliding_window", None) is not None and assistant_model is None and not requires_cross_attention_cache:
                 model_kwargs[cache_name] = DynamicSlidingWindowCache(self.config.sliding_window)
             else:
