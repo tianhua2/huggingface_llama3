@@ -62,7 +62,7 @@ if is_torch_available():
         SpeechEncoderDecoderModel,
         T5ForConditionalGeneration,
     )
-    from transformers.cache_utils import DynamicCache, EncoderDecoderCache, QuantoQuantizedCache, StaticCache
+    from transformers.cache_utils import DynamicCache, DynamicSlidingWindowCache, EncoderDecoderCache, QuantoQuantizedCache, StaticCache
     from transformers.generation import (
         BeamSampleDecoderOnlyOutput,
         BeamSampleEncoderDecoderOutput,
@@ -1868,6 +1868,9 @@ class GenerationTesterMixin:
             if config.is_encoder_decoder:
                 cache_cls = EncoderDecoderCache
                 past_key_values = cache_cls(DynamicCache(), DynamicCache())
+            elif getattr(self.config, "sliding_window", None) is not None:
+                cache_cls = DynamicSlidingWindowCache
+                past_key_values = cache_cls(self.config.sliding_window)
             else:
                 cache_cls = DynamicCache
                 past_key_values = cache_cls()
