@@ -258,6 +258,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("vision-text-dual-encoder", "VisionTextDualEncoderModel"),
         ("visual_bert", "VisualBertModel"),
         ("vit", "ViTModel"),
+        ("sapiens", "SapiensModel"),
         ("vit_hybrid", "ViTHybridModel"),
         ("vit_mae", "ViTMAEModel"),
         ("vit_msn", "ViTMSNModel"),
@@ -583,6 +584,7 @@ MODEL_FOR_IMAGE_MAPPING_NAMES = OrderedDict(
         ("van", "VanModel"),
         ("videomae", "VideoMAEModel"),
         ("vit", "ViTModel"),
+        ("sapiens", "SapiensModel"),
         ("vit_hybrid", "ViTHybridModel"),
         ("vit_mae", "ViTMAEModel"),
         ("vit_msn", "ViTMSNModel"),
@@ -690,6 +692,7 @@ MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES = OrderedDict(
         ("mobilevitv2", "MobileViTV2ForSemanticSegmentation"),
         ("segformer", "SegformerForSemanticSegmentation"),
         ("upernet", "UperNetForSemanticSegmentation"),
+        ("sapiens", "SapiensForSemanticSegmentation"),
     ]
 )
 
