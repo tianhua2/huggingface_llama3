@@ -1613,8 +1613,9 @@ class GenerationMixin:
         # Use DynamicCache() instance by default. This will avoid back and forth from legacy format that
         # keeps copying the cache thus using much more memory
         else:
-            # If using sliding window attention, use specialized DynamicSlidingWindowCache
-            if getattr(self.config, "sliding_window", None) is not None and not requires_cross_attention_cache:
+            # If using sliding window attention, use specialized DynamicSlidingWindowCache. Assisted generation cannot use it because
+            # it needs to roll back the cache with is not possible with a sliding window (for more than 1 generated/discarded token at a time)
+            if getattr(self.config, "sliding_window", None) is not None and assistant_model is None and not requires_cross_attention_cache:
                 model_kwargs[cache_name] = DynamicSlidingWindowCache(self.config.sliding_window)
             else:
                 model_kwargs[cache_name] = (
