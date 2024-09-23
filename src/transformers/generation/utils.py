@@ -1619,6 +1619,8 @@ class GenerationMixin:
                 getattr(self.config, "sliding_window", None) is not None
                 and assistant_model is None
                 and not requires_cross_attention_cache
+                # This last condition is only for BC reasons: attentions have different shape when using sliding window
+                and not generation_config.output_attentions
             ):
                 model_kwargs[cache_name] = DynamicSlidingWindowCache(self.config.sliding_window)
             else:
