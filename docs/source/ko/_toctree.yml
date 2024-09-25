@@ -273,8 +273,8 @@
     - local: in_translation
       title: (번역중) Auto Classes
     - local: in_translation
-      title: (번역중) Backbones
-    - local: in_translation
+      title: 백본(Backbones)
+    - local: main_classes/backbones
       title: (번역중) Callbacks
     - local: in_translation
       title: (번역중) Configuration
