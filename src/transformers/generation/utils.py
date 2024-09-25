@@ -28,6 +28,7 @@ from torch.nn import functional as F
 from ..cache_utils import (
     Cache,
     DynamicCache,
+    DynamicSlidingWindowCache,
     EncoderDecoderCache,
     OffloadedCache,
     QuantizedCacheConfig,
@@ -1601,11 +1602,22 @@ class GenerationMixin:
         # Use DynamicCache() instance by default. This will avoid back and forth from legacy format that
         # keeps copying the cache thus using much more memory
         else:
-            model_kwargs[cache_name] = (
-                DynamicCache()
-                if not requires_cross_attention_cache
-                else EncoderDecoderCache(DynamicCache(), DynamicCache())
-            )
+            # If using sliding window attention, use specialized DynamicSlidingWindowCache. Assisted generation cannot use it because
+            # it needs to generate more than 1 token at a time, which is not possible with current fixed size implementation
+            if (
+                getattr(self.config, "sliding_window", None) is not None
+                and assistant_model is None
+                and not requires_cross_attention_cache
+                # This last condition is only for BC reasons: attentions have different shape when using sliding window
+                and not generation_config.output_attentions
+            ):
+                model_kwargs[cache_name] = DynamicSlidingWindowCache(self.config.sliding_window)
+            else:
+                model_kwargs[cache_name] = (
+                    DynamicCache()
+                    if not requires_cross_attention_cache
+                    else EncoderDecoderCache(DynamicCache(), DynamicCache())
+                )
 
     def _supports_num_logits_to_keep(self) -> bool:
         """
@@ -2196,7 +2208,7 @@ class GenerationMixin:
             should_convert_cache = generation_config.return_legacy_cache
             is_user_defined_cache = user_defined_cache is not None
             is_default_cache_type = (
-                type(result.past_key_values) == DynamicCache  # noqa E721
+                type(result.past_key_values) in (DynamicCache, DynamicSlidingWindowCache)  # noqa E721
                 or (
                     isinstance(result.past_key_values, EncoderDecoderCache)
                     and type(result.past_key_values.self_attention_cache) == DynamicCache  # noqa E721
@@ -4436,10 +4448,8 @@ def stack_model_outputs(model_outputs: List[ModelOutput]) -> ModelOutput:
         if isinstance(data[0], torch.Tensor):
             return torch.cat(data, dim=0)
         # New cache format
-        elif isinstance(data[0], DynamicCache):
-            return DynamicCache.from_batch_splits(data)
-        elif isinstance(data[0], EncoderDecoderCache):
-            return EncoderDecoderCache.from_batch_splits(data)
+        elif isinstance(data[0], (DynamicCache, EncoderDecoderCache)):
+            return data[0].__class__.from_batch_splits(data)
         elif isinstance(data[0], tuple):
             # If the elements of the tuple are also tuples (e.g., past_key_values in our earlier example)
             if isinstance(data[0][0], tuple):
