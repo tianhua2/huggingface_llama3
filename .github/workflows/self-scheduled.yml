@@ -564,9 +564,10 @@ jobs:
     secrets: inherit
 
   check_new_model_failures:
+    # We might add more conditions
     if: ${{ inputs.job == 'run_models_gpu' }}
     name: " "
-    needs: setup
+    needs: send_results
     strategy:
       fail-fast: false
       matrix:
