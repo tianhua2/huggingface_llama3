@@ -1,0 +1,72 @@
+name: model jobs
+
+on:
+  workflow_call:
+    inputs:
+      machine_type:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      docker:
+        required: true
+        type: string
+      start_sha:
+        required: true
+        type: string
+      end_sha:
+        required: true
+        type: string
+
+env:
+  HF_HOME: /mnt/cache
+  TRANSFORMERS_IS_CI: yes
+  OMP_NUM_THREADS: 8
+  MKL_NUM_THREADS: 8
+  RUN_SLOW: yes
+  # For gated repositories, we still need to agree to share information on the Hub repo. page in order to get access.
+  # This token is created under the bot `hf-transformers-bot`.
+  HF_HUB_READ_TOKEN: ${{ secrets.HF_HUB_READ_TOKEN }}
+  SIGOPT_API_TOKEN: ${{ secrets.SIGOPT_API_TOKEN }}
+  TF_FORCE_GPU_ALLOW_GROWTH: true
+  RUN_PT_TF_CROSS_TESTS: 1
+  CUDA_VISIBLE_DEVICES: 0,1
+
+jobs:
+  run_models_gpu:
+    name: " "
+    runs-on:
+      group: '${{ inputs.machine_type }}'
+    container:
+      image: ${{ inputs.docker }}
+      options: --gpus all --shm-size "16gb" --ipc host -v /mnt/cache/.cache/huggingface:/mnt/cache/
+    steps:
+      - name: Update clone
+        working-directory: /transformers
+        run: git fetch && git checkout ${{ github.sha }}
+
+      - name: Update clone 2
+        working-directory: /transformers
+        run: git fetch && git checkout ${{ inputs.start_sha }}
+
+      - name: Reinstall transformers in edit mode (remove the one installed during docker image build)
+        working-directory: /transformers
+        run: python3 -m pip uninstall -y transformers && python3 -m pip install -e .
+
+      - name: NVIDIA-SMI
+        run: |
+          nvidia-smi
+
+      - name: Environment
+        working-directory: /transformers
+        run: |
+          python3 utils/print_env.py
+
+      - name: Show installed libraries and their versions
+        working-directory: /transformers
+        run: pip freeze
+
+      - name: Run all tests on GPU
+        working-directory: /transformers
+        run: python3 -m pytest -rsfE -v --make-reports=vit_test_reports tests/models/vit

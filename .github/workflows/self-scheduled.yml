@@ -562,3 +562,20 @@ jobs:
       ci_event: ${{ inputs.ci_event }}
 
     secrets: inherit
+
+  check_new_model_failures:
+    if: ${{ inputs.job == 'run_models_gpu' }}
+    name: " "
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        machine_type: [aws-g4dn-2xlarge-cache]
+    uses: ./.github/workflows/check_failed_model_tests.yml
+    with:
+      machine_type: ${{ matrix.machine_type }}
+      runner: ${{ inputs.runner }}
+      docker: ${{ inputs.docker }}
+      start_sha: ${{ github.sha }}
+      end_sha: ${{ github.sha }}
+    secrets: inherit
