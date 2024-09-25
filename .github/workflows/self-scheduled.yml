@@ -565,7 +565,7 @@ jobs:
 
   check_new_model_failures:
     # We might add more conditions
-    if: ${{ inputs.job == 'run_models_gpu' }}
+    if: ${{ always() }}
     name: " "
     needs: send_results
     strategy:
