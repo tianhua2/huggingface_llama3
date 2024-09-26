@@ -15,9 +15,6 @@ on:
       start_sha:
         required: true
         type: string
-      end_sha:
-        required: true
-        type: string
 
 env:
   HF_HOME: /mnt/cache
@@ -48,7 +45,8 @@ jobs:
 
       - name: Get target commit
         working-directory: /transformers/utils
-        run: echo "$(TOKEN=${{ secrets.ACCESS_REPO_INFO_TOKEN }} python3 -c 'import os; from get_previous_daily_ci import get_last_daily_ci_run_commit; commit=get_last_daily_ci_run_commit(token=os.environ["TOKEN"]); print(commit)')"
+        run: |
+          echo "END_SHA=$(TOKEN=${{ secrets.ACCESS_REPO_INFO_TOKEN }} python3 -c 'import os; from get_previous_daily_ci import get_last_daily_ci_run_commit; commit=get_last_daily_ci_run_commit(token=os.environ["TOKEN"]); print(commit)')" >> $GITHUB_ENV
 
       - name: Update clone 2
         working-directory: /transformers
@@ -74,4 +72,4 @@ jobs:
       # TODO: we might not have this file
       - name: Run all tests on GPU
         working-directory: /transformers
-        run: python3 utils/check_commit.py --start_commit ${{ inputs.start_sha }} --end_commit ${{ inputs.end_sha }}
+        run: python3 utils/check_commit.py --start_commit ${{ inputs.start_sha }} --end_commit ${{ env.END_SHA }}
