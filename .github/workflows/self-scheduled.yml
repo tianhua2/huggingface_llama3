@@ -578,5 +578,4 @@ jobs:
       runner: ${{ inputs.runner }}
       docker: ${{ inputs.docker }}
       start_sha: ${{ github.sha }}
-      end_sha: ${{ github.sha }}
     secrets: inherit
