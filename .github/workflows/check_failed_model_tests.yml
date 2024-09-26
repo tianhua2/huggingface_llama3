@@ -71,6 +71,7 @@ jobs:
         working-directory: /transformers
         run: pip freeze
 
+      # TODO: we might not have this file
       - name: Run all tests on GPU
         working-directory: /transformers
-        run: python3 -m pytest -rsfE -v --make-reports=vit_test_reports tests/models/vit
+        run: python3 utils/check_commit.py --start_commit ${{ inputs.start_sha }} --end_commit ${{ inputs.end_sha }}
