@@ -26,3 +26,4 @@ jobs:
         shell: bash
         run: |
           echo ${{ env.SLACKCHANNEL }}
+          python -c 'import os; o = os.environ["SLACKCHANNEL"][:8]; print(o)'
