@@ -20,9 +20,9 @@ jobs:
           echo $SLACKCHANNEL
 
           if [ "${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}" != "" ]; then
-            export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}
+            export SLACKCHANNEL="$SLACKCHANNEL",${{ matrix.author }}:hello-${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}
           else
-            export SLACKCHANNEL="$SLACKCHANNEL",$word:null
+            export SLACKCHANNEL="$SLACKCHANNEL",${{ matrix.author }}:null
           fi
 
           export SLACKCHANNEL="${SLACKCHANNEL:1}"
