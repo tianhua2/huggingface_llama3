@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import requests
 
 
 def create_script(target_test):
@@ -86,6 +87,24 @@ git bisect run python3 target_script.py
     return bad_commit
 
 
+def get_commit_info(commit):
+
+    url = f"https://api.github.com/repos/huggingface/transformers/commits/{commit}/pulls"
+    pr_info_for_commit = requests.get(url).json()
+    pr_number = pr_info_for_commit[0]["number"]
+
+    url = f"https://api.github.com/repos/huggingface/transformers/pulls/{pr_number}"
+    pr_for_commit = requests.get(url).json()
+    pr_title = pr_for_commit["title"]
+    pr_author = pr_for_commit["user"]["login"]
+    merged_author = pr_for_commit["merged_by"]["login"]
+
+    # url = f"https://api.github.com/repos/huggingface/transformers/commits/{commit}"
+    # commit = requests.get(url).json()
+
+    return {"commit": commit, "pr_number": pr_number, "author": pr_author, "merged_by": merged_author}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--start_commit", type=str, required=True, help="The starting commit hash.")
@@ -113,7 +132,9 @@ if __name__ == "__main__":
             failed_tests_with_bad_commits = []
             for test in failed_tests:
                 commit = find_bad_commit(target_test=test, start_commit=args.start_commit, end_commit=args.end_commit)
-                failed_tests_with_bad_commits.append({"test": test, "commit": commit})
+                info = {"test": test, "commit": commit}
+                info.update(get_commit_info(commit))
+                failed_tests_with_bad_commits.append(info)
             reports[model]["single-gpu"] = failed_tests_with_bad_commits
 
         with open(args.output_file, "w", encoding="UTF-8") as fp:
