@@ -49,6 +49,7 @@ from transformers import (
 from transformers.integrations import HfDeepSpeedConfig
 from transformers.integrations.deepspeed import (
     is_deepspeed_available,
+    is_deepspeed_zero3_enabled,
     unset_hf_deepspeed_config,
 )
 from transformers.models.auto import get_values
@@ -1765,7 +1766,7 @@ class ModelTesterMixin:
 
             self.assertTrue(models_equal)
 
-    def test_resize_tokens_embeddings(self, deepspeed_enabled=False):
+    def test_resize_tokens_embeddings(self):
         if not self.test_resize_embeddings:
             self.skipTest(reason="test_resize_embeddings is set to `False`")
 
@@ -1776,7 +1777,7 @@ class ModelTesterMixin:
 
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
-            if deepspeed_enabled:
+            if is_deepspeed_zero3_enabled():
                 with deepspeed.zero.Init():
                     model = model_class(config)
             else:
@@ -1804,11 +1805,17 @@ class ModelTesterMixin:
             type_model_embed_post_resize = type(model_embed)
             self.assertEqual(type_model_embed_pre_resize, type_model_embed_post_resize)
             # Check that added embeddings mean is close to the old embeddings mean
-            old_embeddings_mean = torch.mean(model_embed.weight.data[:-10, :], axis=0).cpu().numpy()
-            new_embeddings_mean = torch.mean(model_embed.weight.data[-10:, :], axis=0).cpu().numpy()
-            self.assert_almost_equals(old_embeddings_mean, new_embeddings_mean, tol=1e-2)
+            if is_deepspeed_zero3_enabled():
+                with deepspeed.zero.GatheredParameters(model_embed.weight, modifier_rank=None):
+                    old_embeddings_mean = torch.mean(model_embed.weight.data[:-10, :], axis=0)
+                    new_embeddings_mean = torch.mean(model_embed.weight.data[-10:, :], axis=0)
+            else:
+                old_embeddings_mean = torch.mean(model_embed.weight.data[:-10, :], axis=0)
+                new_embeddings_mean = torch.mean(model_embed.weight.data[-10:, :], axis=0)
+            torch.testing.assert_close(old_embeddings_mean, new_embeddings_mean, atol=1e-3, rtol=1e-1)
+
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
-            if not deepspeed_enabled:
+            if not is_deepspeed_zero3_enabled():
                 # A distriputed launcher is needed for the forward pass when deepspeed is enabled
                 model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -1824,7 +1831,7 @@ class ModelTesterMixin:
             inputs_dict["input_ids"].clamp_(max=model_vocab_size - 15 - 1)
 
             # make sure that decoder_input_ids are resized as well
-            if not deepspeed_enabled:
+            if not is_deepspeed_zero3_enabled():
                 # A distriputed launcher is needed for the forward pass when deepspeed is enabled
                 if "decoder_input_ids" in inputs_dict:
                     inputs_dict["decoder_input_ids"].clamp_(max=model_vocab_size - 15 - 1)
@@ -1839,7 +1846,7 @@ class ModelTesterMixin:
             self.assertTrue(models_equal)
 
             del model
-            if deepspeed_enabled:
+            if is_deepspeed_zero3_enabled():
                 with deepspeed.zero.Init():
                     model = model_class(config)
             else:
@@ -1875,7 +1882,7 @@ class ModelTesterMixin:
             # Test when `vocab_size` is smaller than `hidden_size`.
             del model
             config.vocab_size = 4
-            if deepspeed_enabled:
+            if is_deepspeed_zero3_enabled():
                 with deepspeed.zero.Init():
                     model = model_class(config)
             else:
@@ -1897,9 +1904,14 @@ class ModelTesterMixin:
             type_model_embed_post_resize = type(model_embed)
             self.assertEqual(type_model_embed_pre_resize, type_model_embed_post_resize)
             # Check that added embeddings mean is close to the old embeddings mean
-            old_embeddings_mean = torch.mean(model_embed.weight.data[:-10, :], axis=0).cpu().numpy()
-            new_embeddings_mean = torch.mean(model_embed.weight.data[-10:, :], axis=0).cpu().numpy()
-            self.assert_almost_equals(old_embeddings_mean, new_embeddings_mean, tol=1e-2)
+            if is_deepspeed_zero3_enabled():
+                with deepspeed.zero.GatheredParameters(model_embed.weight, modifier_rank=None):
+                    old_embeddings_mean = torch.mean(model_embed.weight.data[:-10, :], axis=0)
+                    new_embeddings_mean = torch.mean(model_embed.weight.data[-10:, :], axis=0)
+            else:
+                old_embeddings_mean = torch.mean(model_embed.weight.data[:-10, :], axis=0)
+                new_embeddings_mean = torch.mean(model_embed.weight.data[-10:, :], axis=0)
+            torch.testing.assert_close(old_embeddings_mean, new_embeddings_mean, atol=1e-3, rtol=1e-1)
 
     @require_deepspeed
     @require_torch_gpu
@@ -1911,7 +1923,7 @@ class ModelTesterMixin:
             },
         }
         with _deepspeed_zero3(ds_config):
-            self.test_resize_tokens_embeddings(deepspeed_enabled=True)
+            self.test_resize_tokens_embeddings()
 
     @require_deepspeed
     @require_torch_multi_gpu
@@ -1922,7 +1934,7 @@ class ModelTesterMixin:
             },
         }
         with _deepspeed_zero3(ds_config):
-            self.test_resize_tokens_embeddings(deepspeed_enabled=True)
+            self.test_resize_tokens_embeddings()
 
     def test_resize_embeddings_untied(self):
         if not self.test_resize_embeddings:
@@ -1937,7 +1949,11 @@ class ModelTesterMixin:
 
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
-            model = model_class(config).to(torch_device)
+            if is_deepspeed_zero3_enabled():
+                with deepspeed.zero.Init():
+                    model = model_class(config)
+            else:
+                model = model_class(config).to(torch_device)
 
             # if no output embeddings -> leave test
             if model.get_output_embeddings() is None:
@@ -1954,7 +1970,29 @@ class ModelTesterMixin:
             if output_embeds.bias is not None:
                 self.assertEqual(output_embeds.bias.shape[0], model_vocab_size + 10)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
-            model(**self._prepare_for_class(inputs_dict, model_class))
+            if not is_deepspeed_zero3_enabled():
+                # A distriputed launcher is needed for the forward pass when deepspeed is enabled
+                model(**self._prepare_for_class(inputs_dict, model_class))
+
+            # Test multivariate resizing.
+            model.resize_token_embeddings(model_vocab_size + 10, multivariate_resizing=True)
+            output_embeds = model.get_output_embeddings()
+            # Check that added embeddings mean is close to the old embeddings mean
+            if is_deepspeed_zero3_enabled():
+                with deepspeed.zero.GatheredParameters(output_embeds.weight, modifier_rank=None):
+                    old_embeddings_mean = torch.mean(output_embeds.weight.data[:-10, :], axis=0)
+                    new_embeddings_mean = torch.mean(output_embeds.weight.data[-10:, :], axis=0)
+            else:
+                old_embeddings_mean = torch.mean(output_embeds.weight.data[:-10, :], axis=0)
+                new_embeddings_mean = torch.mean(output_embeds.weight.data[-10:, :], axis=0)
+            torch.testing.assert_close(old_embeddings_mean, new_embeddings_mean, atol=1e-3, rtol=1e-1)
+            # check if the bais is always initialized with zero.
+            if output_embeds.bias is not None:
+                if is_deepspeed_zero3_enabled():
+                    with deepspeed.zero.GatheredParameters(output_embeds.bais, modifier_rank=None):
+                        assert output_embeds.bais.data[-10:, :] == torch.tensor([0 for _ in range(10)])
+                else:
+                    assert output_embeds.bais.data[-10:, :] == torch.tensor([0 for _ in range(10)])
 
             # Check that resizing the token embeddings with a smaller vocab size decreases the model's vocab size
             model.resize_token_embeddings(model_vocab_size - 15)
@@ -1972,7 +2010,32 @@ class ModelTesterMixin:
             if "decoder_input_ids" in inputs_dict:
                 inputs_dict["decoder_input_ids"].clamp_(max=model_vocab_size - 15 - 1)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
-            model(**self._prepare_for_class(inputs_dict, model_class))
+            if not is_deepspeed_zero3_enabled():
+                # A distriputed launcher is needed for the forward pass when deepspeed is enabled
+                model(**self._prepare_for_class(inputs_dict, model_class))
+
+    @require_deepspeed
+    @require_torch_gpu
+    def test_resize_embeddings_untied_with_deepspeed(self):
+        ds_config = {
+            "zero_optimization": {
+                "stage": 3,
+                "offload_param": {"device": "cpu", "pin_memory": True},
+            },
+        }
+        with _deepspeed_zero3(ds_config):
+            self.test_resize_embeddings_untied()
+
+    @require_deepspeed
+    @require_torch_multi_gpu
+    def test_resize_embeddings_untied_with_deepspeed_multi_gpu(self):
+        ds_config = {
+            "zero_optimization": {
+                "stage": 3,
+            },
+        }
+        with _deepspeed_zero3(ds_config):
+            self.test_resize_embeddings_untied()
 
     def test_model_get_set_embeddings(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
