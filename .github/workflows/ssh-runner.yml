@@ -22,6 +22,7 @@ jobs:
           else
             export SLACKCHANNEL="$SLACKCHANNEL",${{ env.github_actor }}:null
           fi
+          export SLACKCHANNEL="${SLACKCHANNEL:1}"
           echo $SLACKCHANNEL
 
 #      - name: Store Slack infos
