@@ -39,6 +39,21 @@ jobs:
       image: ${{ inputs.docker }}
       options: --gpus all --shm-size "16gb" --ipc host -v /mnt/cache/.cache/huggingface:/mnt/cache/
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci_results_run_models_gpu
+          path: /transformers/ci_results_run_models_gpu
+
+      - name: Update clone
+        working-directory: /transformers
+        run: |
+          ls -l ci_results_run_models_gpu
+
+      - name: Update clone
+        working-directory: /transformers
+        run: |
+          ls -l /transformers/ci_results_run_models_gpu
+
       - name: Update clone
         working-directory: /transformers
         run: git fetch && git checkout ${{ github.sha }}
