@@ -10,8 +10,9 @@ jobs:
     name: "SSH"
     runs-on: ubuntu-22.04
     strategy:
+      max-parallel: 1
       matrix:
-        author: [ydshieh]
+        author: [ydshieh, zucchini_nlp]
     steps:
       - name: Store Slack infos
         shell: bash
