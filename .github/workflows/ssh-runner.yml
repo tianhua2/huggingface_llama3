@@ -16,14 +16,16 @@ jobs:
         shell: bash
         run: |
           echo "${{ env.github_actor }}"
+          echo $SLACKCHANNEL
           if [ "${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}" != "" ]; then
-            echo "SLACKCHANNEL=hello-${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}" >> $GITHUB_ENV
+            export SLACKCHANNEL="$SLACKCHANNEL",${{ env.github_actor }}:hello-${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}
           else
-            echo "SLACKCHANNEL=hello-${{ secrets.SLACK_CIFEEDBACK_CHANNEL }}" >> $GITHUB_ENV
+            export SLACKCHANNEL="$SLACKCHANNEL",${{ env.github_actor }}:null
           fi
+          echo $SLACKCHANNEL
 
-      - name: Store Slack infos
-        shell: bash
-        run: |
-          echo ${{ env.SLACKCHANNEL }}
-          python -c 'import os; o = os.environ["SLACKCHANNEL"][:8]; print(o)'
+#      - name: Store Slack infos
+#        shell: bash
+#        run: |
+#          echo ${{ env.SLACKCHANNEL }}
+#          python -c 'import os; o = os.environ["SLACKCHANNEL"][:8]; print(o)'

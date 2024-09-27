@@ -7,7 +7,7 @@ on:
     - cron: "17 2 * * *"
   push:
     branches:
-      - ping_author_2
+      - ping_author_3
 
 jobs:
   model-ci:
