@@ -1,4 +1,6 @@
 import argparse
+import json
+import os
 import re
 import subprocess
 
@@ -89,12 +91,34 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--start_commit", type=str, required=True, help="The starting commit hash.")
     parser.add_argument("--end_commit", type=str, required=True, help="The ending commit hash.")
+    parser.add_argument("--test", type=str, help="The test to check.")
+    parser.add_argument("--file", type=str, help="The report file.")
+    parser.add_argument("--output_file", type=str, required=True, help="The path of the output file.")
     args = parser.parse_args()
 
-    print(args.start_commit)
-    print(args.end_commit)
+    print(f"start_commit: {args.start_commit}")
+    print(f"end_commit: {args.end_commit}")
 
-    target_test = "tests/models/vit/test_modeling_vit.py::ViTModelTest::test_foo"
-    find_bad_commit(target_test=target_test, start_commit=args.start_commit, end_commit=args.end_commit)
+    assert len({args.file is None, args.file is None}) == 1
 
-    # python3 check_commit2.py --start_commit 54705c8a --end_commit 317e069e
+    if args.test is not None:
+        commit = find_bad_commit(target_test=args.test, start_commit=args.start_commit, end_commit=args.end_commit)
+        with open(args.output_file, "w", encoding="UTF-8") as fp:
+            fp.write(f"{args.test}\n{commit}")
+    elif os.path.isfile(args.file):
+        with open(args.file, "r", encoding="UTF-8") as fp:
+            reports = json.load(fp)
+
+        for model in reports:
+            failed_tests = reports[model]["single-gpu"]
+            failed_tests_with_bad_commits = []
+            for test in failed_tests:
+                commit = find_bad_commit(target_test=test, start_commit=args.start_commit, end_commit=args.end_commit)
+                failed_tests_with_bad_commits.append({"test": test, "commit": commit})
+            reports[model]["single-gpu"] = failed_tests_with_bad_commits
+
+        with open(args.output_file, "w", encoding="UTF-8") as fp:
+            json.dump(reports, fp, ensure_ascii=False, indent=4)
+
+    # python3 check_commit2.py --start_commit 54705c8a --end_commit 317e069e --file ci_results_run_models_gpu/new_model_failures.json --output_file new_model_failures_with_bad_commit.json
+    # python3 check_commit2.py --start_commit 54705c8a --end_commit 317e069e --test tests/models/vit/test_modeling_vit.py::ViTModelTest::test_foo --output_file new_model_failures_with_bad_commit.txt

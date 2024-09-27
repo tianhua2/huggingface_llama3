@@ -46,16 +46,6 @@ jobs:
 
       - name: Update clone
         working-directory: /transformers
-        run: |
-          ls -l ci_results_run_models_gpu
-
-      - name: Update clone
-        working-directory: /transformers
-        run: |
-          ls -l /transformers/ci_results_run_models_gpu
-
-      - name: Update clone
-        working-directory: /transformers
         run: git fetch && git checkout ${{ github.sha }}
 
       - name: Get target commit
@@ -63,7 +53,7 @@ jobs:
         run: |
           echo "END_SHA=$(TOKEN=${{ secrets.ACCESS_REPO_INFO_TOKEN }} python3 -c 'import os; from get_previous_daily_ci import get_last_daily_ci_run_commit; commit=get_last_daily_ci_run_commit(token=os.environ["TOKEN"]); print(commit)')" >> $GITHUB_ENV
 
-      - name: Update clone 2
+      - name: Checkout to `start_sha`
         working-directory: /transformers
         run: git fetch && git checkout ${{ inputs.start_sha }}
 
@@ -84,7 +74,6 @@ jobs:
         working-directory: /transformers
         run: pip freeze
 
-      # TODO: we might not have this file
-      - name: Run all tests on GPU
+      - name: Check failed tests
         working-directory: /transformers
-        run: python3 utils/check_commit.py --start_commit ${{ inputs.start_sha }} --end_commit ${{ env.END_SHA }}
+        run: python3 utils/check_commit.py --start_commit ${{ inputs.start_sha }} --end_commit ${{ env.END_SHA }} --file ci_results_run_models_gpu/new_model_failures.json --output_file new_model_failures_with_bad_commit.json
