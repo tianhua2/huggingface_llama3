@@ -21,8 +21,9 @@ jobs:
           for word in I love dogs "${{ env.github_actor }}"
           do
             echo $word
-            if [ "${{ secrets[format('{0}_{1}', '$word', 'SLACK_ID')] }}" != "" ]; then
-              export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', '$word', 'SLACK_ID')] }}
+            echo "word=$word" >> $GITHUB_ENV
+            if [ "${{ secrets[format('{0}_{1}', env.word, 'SLACK_ID')] }}" != "" ]; then
+              export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', env.word, 'SLACK_ID')] }}
             else
               export SLACKCHANNEL="$SLACKCHANNEL",$word:null
             fi
