@@ -22,6 +22,7 @@ jobs:
           do
             echo $word
             echo "word=$word" >> $GITHUB_ENV
+            echo ${{ env.word }}
             if [ "${{ secrets[format('{0}_{1}', env.word, 'SLACK_ID')] }}" != "" ]; then
               export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', env.word, 'SLACK_ID')] }}
             else
