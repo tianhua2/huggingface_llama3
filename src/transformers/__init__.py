@@ -758,6 +758,7 @@ _import_structure = {
     "models.swinv2": ["Swinv2Config"],
     "models.switch_transformers": ["SwitchTransformersConfig"],
     "models.t5": ["T5Config"],
+    "models.hhemv2": ["HHEMv2Config"],
     "models.table_transformer": ["TableTransformerConfig"],
     "models.tapas": [
         "TapasConfig",
@@ -3416,6 +3417,7 @@ else:
             "load_tf_weights_in_t5",
         ]
     )
+    _import_structure["models.hhemv2"].extend(["HHEMv2Model"])
     _import_structure["models.table_transformer"].extend(
         [
             "TableTransformerForObjectDetection",
@@ -5292,6 +5294,7 @@ if TYPE_CHECKING:
         GroupViTVisionConfig,
     )
     from .models.herbert import HerbertTokenizer
+    from .models.hhemv2 import HHEMv2Config
     from .models.hiera import HieraConfig
     from .models.hubert import HubertConfig
     from .models.ibert import IBertConfig
@@ -7048,6 +7051,9 @@ if TYPE_CHECKING:
             GroupViTPreTrainedModel,
             GroupViTTextModel,
             GroupViTVisionModel,
+        )
+        from .models.hhemv2 import (
+            HHEMv2Model,
         )
         from .models.hiera import (
             HieraBackbone,
