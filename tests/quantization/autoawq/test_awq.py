@@ -21,6 +21,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, AwqCon
 from transformers.testing_utils import (
     require_accelerate,
     require_auto_awq,
+    require_intel_extension_for_pytorch,
     require_torch_gpu,
     require_torch_multi_gpu,
     slow,
@@ -490,3 +491,28 @@ class AwqScaleTest(unittest.TestCase):
             "TechxGenus/starcoder2-3b-AWQ", torch_dtype=torch.float16, device_map="cuda"
         )
         self.assertTrue(isinstance(quantized_model.model.layers[0].mlp.act, ScaledActivation))
+
+
+@slow
+@require_auto_awq
+@require_accelerate
+@require_intel_extension_for_pytorch
+class AwqIPEXTest(unittest.TestCase):
+    def test_quantized_model_ipex(self):
+        """
+        Simple test that checks if the quantized model is working properly with ipex backend
+        """
+        quantization_config = AwqConfig(version="ipex")
+
+        model = AutoModelForCausalLM.from_pretrained(
+            "TheBloke/WizardLM-1.0-Uncensored-Llama2-13B-AWQ",
+            quantization_config=quantization_config,
+            device_map="cpu",
+        )
+        tokenizer = AutoTokenizer.from_pretrained("TheBloke/WizardLM-1.0-Uncensored-Llama2-13B-AWQ")
+        input_ids = tokenizer.encode("How to make a cake", return_tensors="pt").to(model.device)
+        output = model.generate(input_ids, do_sample=False, max_length=20, pad_token_id=50256)
+        print(tokenizer.decode(output[0], skip_special_tokens=True))
+
+        expected_output = "How to make a cake with flour, sugar, eggs, and baking powder"
+        self.assertIn(tokenizer.decode(output[0], skip_special_tokens=True), expected_output)
