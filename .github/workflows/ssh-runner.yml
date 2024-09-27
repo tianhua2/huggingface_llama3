@@ -21,7 +21,7 @@ jobs:
           for word in I love dogs "${{ env.github_actor }}"
           do
             echo $word
-            echo $word_SLACK_ID
+            echo "$word"_SLACK_ID
             echo "${{ secrets['$word_SLACK_ID'] }}"
             if [ "${{ secrets['$word_SLACK_ID'] }}" != "" ]; then
               export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', env.word, 'SLACK_ID')] }}
