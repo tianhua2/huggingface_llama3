@@ -77,3 +77,9 @@ jobs:
       - name: Check failed tests
         working-directory: /transformers
         run: python3 utils/check_commit.py --start_commit ${{ inputs.start_sha }} --end_commit ${{ env.END_SHA }} --file ci_results_run_models_gpu/new_model_failures.json --output_file new_model_failures_with_bad_commit.json
+
+      - name: Check
+        working-directory: /transformers
+        run: |
+          ls -l new_model_failures_with_bad_commit.json
+          cat new_model_failures_with_bad_commit.json
