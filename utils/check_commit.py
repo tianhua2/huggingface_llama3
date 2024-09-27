@@ -17,8 +17,12 @@ result = subprocess.run(
 print(result.stdout)
 
 if len(result.stderr) > 0:
-    print(f"pytest failed to run: {{result.stderr}}")
-    exit(-1)
+    if "ERROR: not found: " in result.stderr:
+        print("test not found in this commit")
+        exit(0)
+    else:
+        print(f"pytest failed to run: {{result.stderr}}")
+        exit(-1)
 elif f"{target_test} FAILED" in result.stdout:
     print("test failed")
     exit(2)
@@ -77,7 +81,7 @@ git bisect run python3 target_script.py
     print(f"Between `start_commit` {start_commit} and `end_commit` {end_commit}")
     print(f"bad_commit: {bad_commit}\n")
 
-    # we need to check ... if all commit are good (doesn't really make sense)
+    # we need to check ... if all commits are good (doesn't really make sense)
     return bad_commit
 
 
