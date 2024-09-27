@@ -21,3 +21,8 @@ jobs:
           else
             echo "SLACKCHANNEL=hello-${{ secrets.SLACK_CIFEEDBACK_CHANNEL }}" >> $GITHUB_ENV
           fi
+
+      - name: Store Slack infos
+        shell: bash
+        run: |
+          echo ${{ env.SLACKCHANNEL }}
