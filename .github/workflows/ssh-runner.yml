@@ -2,7 +2,8 @@ name: SSH into our runners
 
 on:
   push:
-    - ping_author_2
+    branches:
+      - ping_author_2
 
 jobs:
   ssh_runner:
