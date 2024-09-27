@@ -83,7 +83,6 @@ git bisect run python3 target_script.py
     print(f"Between `start_commit` {start_commit} and `end_commit` {end_commit}")
     print(f"bad_commit: {bad_commit}\n")
 
-    # we need to check ... if all commits are good (doesn't really make sense)
     return bad_commit
 
 
@@ -119,8 +118,6 @@ if __name__ == "__main__":
 
         with open(args.output_file, "w", encoding="UTF-8") as fp:
             json.dump(reports, fp, ensure_ascii=False, indent=4)
-
-    # TODO: how to get the environment variables!
 
     # python3 check_commit2.py --start_commit 54705c8a --end_commit 317e069e --file ci_results_run_models_gpu/new_model_failures.json --output_file new_model_failures_with_bad_commit.json
     # python3 check_commit2.py --start_commit 54705c8a --end_commit 317e069e --test tests/models/vit/test_modeling_vit.py::ViTModelTest::test_foo --output_file new_model_failures_with_bad_commit.txt
