@@ -9,28 +9,14 @@ jobs:
   ssh_runner:
     name: "SSH"
     runs-on: ubuntu-22.04
-    strategy:
-      max-parallel: 1
-      matrix:
-        author: [ydshieh, zucchini_nlp]
+    env:
+      github_actor: ydshieh
     steps:
       - name: Store Slack infos
         shell: bash
         run: |
-          echo "${{ matrix.author }}"
-          echo "${{ env.SLACKCHANNEL }}"
-          echo $SLACKCHANNEL
-
-          if [ "${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}" != "" ]; then
-            export SLACKCHANNEL="$SLACKCHANNEL",${{ matrix.author }}:hello-${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}
-          else
-            export SLACKCHANNEL="$SLACKCHANNEL",${{ matrix.author }}:null
-          fi
-
-          export SLACKCHANNEL="${SLACKCHANNEL:0}"
-          echo $SLACKCHANNEL
-          echo "SLACKCHANNEL=$SLACKCHANNEL" >> $GITHUB_ENV
-          
+          echo "${{ env.github_actor }}"
+          echo ${{ secrets[format('{0}_{1}', env.github_actor ,SLACK_ID)] }}
 
 #      - name: Store Slack infos
 #        shell: bash
