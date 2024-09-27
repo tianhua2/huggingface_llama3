@@ -88,21 +88,30 @@ git bisect run python3 target_script.py
 
 
 def get_commit_info(commit):
+    pr_number = None
+    author = None
+    merged_author = None
 
     url = f"https://api.github.com/repos/huggingface/transformers/commits/{commit}/pulls"
     pr_info_for_commit = requests.get(url).json()
-    pr_number = pr_info_for_commit[0]["number"]
 
-    url = f"https://api.github.com/repos/huggingface/transformers/pulls/{pr_number}"
-    pr_for_commit = requests.get(url).json()
-    pr_title = pr_for_commit["title"]
-    pr_author = pr_for_commit["user"]["login"]
-    merged_author = pr_for_commit["merged_by"]["login"]
+    if len(pr_info_for_commit) > 0:
+        pr_number = pr_info_for_commit[0]["number"]
 
-    # url = f"https://api.github.com/repos/huggingface/transformers/commits/{commit}"
-    # commit = requests.get(url).json()
+        url = f"https://api.github.com/repos/huggingface/transformers/pulls/{pr_number}"
+        pr_for_commit = requests.get(url).json()
+        pr_title = pr_for_commit["title"]
+        author = pr_for_commit["user"]["login"]
 
-    return {"commit": commit, "pr_number": pr_number, "author": pr_author, "merged_by": merged_author}
+
+        merged_author = pr_for_commit["merged_by"]["login"]
+
+    if author is None:
+        url = f"https://api.github.com/repos/huggingface/transformers/commits/{commit}"
+        commit_info = requests.get(url).json()
+        author = commit_info["author"]["login"]
+
+    return {"commit": commit, "pr_number": pr_number, "author": author, "merged_by": merged_author}
 
 
 if __name__ == "__main__":
