@@ -25,7 +25,7 @@ from tokenizers import Tokenizer, decoders, normalizers, pre_tokenizers
 from tokenizers.models import BPE
 
 from .. import AddedToken
-from ..convert_slow_tokenizer import LlamaConverter, Qwen2Converter
+from ..convert_slow_tokenizer import GPT2Converter, LlamaConverter, Qwen2Converter
 from ..utils import logging
 from ..utils.logging import tqdm
 
@@ -107,6 +107,29 @@ GGUF_TENSOR_MAPPING = {
         "output.weight": "lm_head.weight",
         "output_norm": "model.norm",
     },
+    "falcon7b": {
+        "token_embd": "word_embeddings",
+        "blk": "h",
+        "ffn_up": "mlp.dense_h_to_4h",
+        "ffn_down": "mlp.dense_4h_to_h",
+        "attn_norm": "input_layernorm",
+        "attn_qkv": "self_attention.query_key_value",
+        "attn_output": "self_attention.dense",
+        ".output.": ".lm_head.",
+        "output_norm": "ln_f",
+    },
+    "falcon40b": {
+        "token_embd": "word_embeddings",
+        "blk": "h",
+        "ffn_up": "mlp.dense_h_to_4h",
+        "ffn_down": "mlp.dense_4h_to_h",
+        ".attn_norm.": ".ln_mlp.",
+        "attn_norm_2": "ln_attn",
+        "attn_qkv": "self_attention.query_key_value",
+        "attn_output": "self_attention.dense",
+        ".output.": ".lm_head.",
+        "output_norm": "ln_f",
+    },
 }
 
 
@@ -154,6 +177,18 @@ GGUF_CONFIG_MAPPING = {
         "vocab_size": "vocab_size",
     },
     "qwen2moe": {
+        "context_length": "max_position_embeddings",
+        "block_count": "num_hidden_layers",
+        "feed_forward_length": "intermediate_size",
+        "embedding_length": "hidden_size",
+        "rope.dimension_count": None,
+        "rope.freq_base": "rope_theta",
+        "attention.head_count": "num_attention_heads",
+        "attention.head_count_kv": "num_key_value_heads",
+        "attention.layer_norm_rms_epsilon": "rms_norm_eps",
+        "vocab_size": "vocab_size",
+    },
+    "falcon": {
         "context_length": "max_position_embeddings",
         "block_count": "num_hidden_layers",
         "feed_forward_length": "intermediate_size",
@@ -492,11 +527,25 @@ class GGUFPhi3Converter(LlamaConverter):
         return tokenizer
 
 
+class GGUFFalconConverter(GPT2Converter):
+    def __init__(self, tokenizer_dict):
+        self.original_tokenizer = GGUFTokenizerSkeleton(tokenizer_dict)
+        self.additional_kwargs = {}
+
+    def converted(self) -> Tokenizer:
+        vocab = {word: i for i, word in enumerate(self.original_tokenizer.tokens)}
+        merges = self.original_tokenizer.merges
+        tokenizer = super().converted(vocab, merges)
+
+        return tokenizer
+
+
 GGUF_TO_FAST_CONVERTERS = {
     "llama": GGUFLlamaConverter,
     "qwen2": GGUFQwen2Converter,
     "qwen2_moe": GGUFQwen2Converter,
     "phi3": GGUFPhi3Converter,
+    "falcon": GGUFFalconConverter,
 }
 
 
