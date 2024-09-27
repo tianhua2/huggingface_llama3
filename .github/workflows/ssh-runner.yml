@@ -18,16 +18,16 @@ jobs:
           echo "${{ env.github_actor }}"
           echo $SLACKCHANNEL
 
-          for word in I love dogs
+          for word in I love dogs "${{ env.github_actor }}"
           do
             echo $word
+            if [ "${{ secrets[format('{0}_{1}', '$word', 'SLACK_ID')] }}" != "" ]; then
+              export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', '$word', 'SLACK_ID')] }}
+            else
+              export SLACKCHANNEL="$SLACKCHANNEL",$word:null
+            fi
           done
 
-          if [ "${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}" != "" ]; then
-            export SLACKCHANNEL="$SLACKCHANNEL",${{ env.github_actor }}:hello-${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}
-          else
-            export SLACKCHANNEL="$SLACKCHANNEL",${{ env.github_actor }}:null
-          fi
           export SLACKCHANNEL="${SLACKCHANNEL:1}"
           echo $SLACKCHANNEL
 
