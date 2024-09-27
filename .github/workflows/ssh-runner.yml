@@ -9,26 +9,21 @@ jobs:
   ssh_runner:
     name: "SSH"
     runs-on: ubuntu-22.04
-    env:
-      github_actor: ydshieh
+    strategy:
+      matrix:
+        author: [ydshieh]
     steps:
       - name: Store Slack infos
         shell: bash
         run: |
-          echo "${{ env.github_actor }}"
+          echo "${{ matrix.author }}"
           echo $SLACKCHANNEL
 
-          for word in I love dogs "${{ env.github_actor }}"
-          do
-            echo $word
-            echo "$word"_SLACK_ID
-            echo ${{ secrets[format('{0}', '"$word"_SLACK_ID')] }}
-            if [ "${{ secrets['$word_SLACK_ID'] }}" != "" ]; then
-              export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', env.word, 'SLACK_ID')] }}
-            else
-              export SLACKCHANNEL="$SLACKCHANNEL",$word:null
-            fi
-          done
+          if [ "${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}" != "" ]; then
+            export SLACKCHANNEL="$SLACKCHANNEL",$word:hello-${{ secrets[format('{0}_{1}', matrix.author, 'SLACK_ID')] }}
+          else
+            export SLACKCHANNEL="$SLACKCHANNEL",$word:null
+          fi
 
           export SLACKCHANNEL="${SLACKCHANNEL:1}"
           echo $SLACKCHANNEL
