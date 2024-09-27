@@ -50,6 +50,8 @@ from ...utils import (
     replace_return_docstrings,
 )
 from .configuration_llama import LlamaConfig
+from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat_calc, rand_flip_bits, bit_flip
+print('running my llama')
 
 
 logger = logging.get_logger(__name__)
