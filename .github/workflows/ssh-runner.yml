@@ -17,6 +17,12 @@ jobs:
         run: |
           echo "${{ env.github_actor }}"
           echo $SLACKCHANNEL
+
+          for word in I love dogs
+          do
+            echo $word
+          done
+
           if [ "${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}" != "" ]; then
             export SLACKCHANNEL="$SLACKCHANNEL",${{ env.github_actor }}:hello-${{ secrets[format('{0}_{1}', env.github_actor, 'SLACK_ID')] }}
           else
